@@ -60,15 +60,15 @@
     padding-right: 0px;
 }
 
-.frontpage_header h2 {
+.homepage_header h2 {
     font-size: 32pt;
 }
 
-.frontpage_header h1 {
+.homepage_header h1 {
     font-size: 52pt;
 }
 
-.frontpage_header {
+.homepage_header {
     color: white;
     padding: 50px;
     background-image: url("../resources/enoute_chart.png");
