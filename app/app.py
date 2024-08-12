@@ -1,4 +1,4 @@
-from tkinter import END, Tk, Frame, Text, Button, Widget
+from tkinter import END, Entry, Tk, Frame, Text, Button, Widget
 from tkinter.ttk import Notebook
 from typing import Callable, List
 
@@ -23,6 +23,14 @@ def main() -> None:
         for key in frames.keys():
             notebook.add(frames[key], text=key)
         notebook.pack(fill='both')
+
+    def clear_text_box(text: Text):
+        if text["state"] == "disabled":
+            text.configure(state="normal")
+            text.delete("1.0", END)
+            text.configure(state="disabled")
+        else:
+            text.delete("1.0", END)
 
     def setup_frames() -> dict[str, Frame]:
         # Inserting the frames into a dictionary allows using a loop in the setup function above
@@ -64,8 +72,26 @@ def main() -> None:
                         pass
                     case _:
                         local_split_flight_plan.insert(0, "")
-                print(local_split_flight_plan)
-                return "Flight plan received"  # TODO Bring it all together here, its late and I'm going to bed
+                # 0: State
+                # 1: Game Callsign
+                # 2: Radio Callsign
+                # 3: IFR/VFR
+                # 4: Aircraft Type
+                # 5: Squawk Code
+                # 6: Timestamp
+                # 7: Requested Flight Level
+                # 8: Departure
+                # 9: Arrival
+                # 10: Route
+                # 11: Remarks
+                # 12: Cleared
+
+                return_string: str = (f"CLR {local_split_flight_plan[2].upper()} TO ARR "
+                                      f"{local_split_flight_plan[9].upper()} VIA {local_split_flight_plan[10].upper()}."
+                                      f" RMK INITIAL ALT 4000 EXPECT {local_split_flight_plan[7]} 10 MINS AFT DEP. "
+                                      f"DEP FREQ ON _. CTC GND ON _ FOR PUSH AND TAXI.")
+
+                return return_string  # TODO Bring it all together here, its late and I'm going to bed
 
             children: list[Widget] = frames["FAA"].winfo_children()
             try:
@@ -74,9 +100,9 @@ def main() -> None:
                 # But hey it's in a try except block and you can do anything you want in those... right?
                 # I just found out I can do this too... I forsee many crashed programs in my future
                 text: Text = children[2]  # Pyright really hates this and I kinda do too, oh well.
-                text.config(state="normal")
-                text.delete(1.0, END)
+                clear_text_box(text)
                 input_field: Text = children[0]  # This too.
+                text.config(state="normal")
                 text.insert(1.0, generate_faa_clearance(input_field.get("1.0", END)))  # I love one-liners.
                 text.config(state="disabled")
             except Exception as e:
