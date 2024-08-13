@@ -1,11 +1,86 @@
-from tkinter import END, Entry, Tk, Frame, Text, Button, Widget
+import traceback
+from tkinter import END, Tk, Frame, Text, Button, Widget
 from tkinter.ttk import Notebook
-from typing import Callable, List
+from typing import Callable, List, Literal
 
 
 # Total stack overflow tabs open concurrently: 7
 # % of code ripped from ChatGPT: 0
 # Don't do AI, kids.
+
+
+class FlightPlan:
+
+    game_call_sign: str
+    radio_call_sign: str
+    flight_rules: str
+    aircraft_type: str
+    squawk_code: str
+    timestamp: str
+    requested_flight_level: str
+    departure: str
+    arrival: str
+    route: str
+    remarks: str
+
+    def __init__(self, raw_flight_plan: str):
+
+        raw_flight_plan = raw_flight_plan
+        raw_flight_plan = raw_flight_plan.replace("\"", "\t")
+        raw_flight_plan = raw_flight_plan.replace("/", "\t")
+        raw_flight_plan = raw_flight_plan.replace(" ", "")
+        raw_flight_plan = raw_flight_plan.replace("\n", "\t")
+        split_flight_plan = raw_flight_plan.split("\t")
+        # This mess is to remove empty list items without crashing. I don't know of a better way to do this.
+        to_remove: List[int] = []
+        for i in range(len(split_flight_plan)):
+            if split_flight_plan[i] == "\t" or split_flight_plan[i] == "":
+                to_remove.append(i)
+        to_remove.reverse()
+        for i in to_remove:
+            split_flight_plan.pop(i)
+        match split_flight_plan[0]:
+            case "DEPARTURE":
+                pass
+            case "ARRIVAL":
+                pass
+            case "ENROUTE":
+                pass
+            case "EMERGENCY":
+                pass
+            case _:
+                split_flight_plan.insert(0, "")
+
+        self.game_call_sign = split_flight_plan[1].upper()
+        self.radio_call_sign = split_flight_plan[2].upper()
+        self.flight_rules = split_flight_plan[3].upper()
+        self.aircraft_type = split_flight_plan[4].upper()
+        self.generate_squawk()
+        self.timestamp = split_flight_plan[6].upper()
+        self.requested_flight_level = split_flight_plan[7].upper()
+        self.departure = split_flight_plan[8].upper()
+        self.arrival = split_flight_plan[9].upper()
+        self.route = split_flight_plan[10].upper()
+        self.remarks = split_flight_plan[11].upper()
+
+    def generate_squawk(self) -> None:
+        self.squawk_code = "1200"  # TODO IMPLEMENT THIS
+
+    def find_frequency(self, airport: str, frequency_type: Literal["del", "gnd", "twr", "app", "dep", "ctr"]) -> str:
+        return "122.800"
+
+    def to_string(self, phraseology: Literal["faa", "caa", "icao"]) -> str:
+        match phraseology:
+            case "faa":
+                return_string: str = (f"CLR {self.radio_call_sign} TO ARR {self.arrival} VIA {self.route}. RMK INITIAL "
+                                      f"ALT 4000 EXPECT {self.requested_flight_level} 10 MINS AFT DEP. DEP FREQ ON "
+                                      f"{self.find_frequency(self.departure, 'dep')} CTC GND ON "
+                                      f"{self.find_frequency(self.departure, 'gnd')} FOR PUSH AND TAXI.")
+                return return_string
+            case "caa":
+                return "NOT IMPLEMENTED"  # TODO IMPLEMENT THIS
+            case "icao":
+                return "NOT IMPLEMENTED"  # TODO IMPLEMENT THIS
 
 
 def main() -> None:
@@ -39,87 +114,26 @@ def main() -> None:
             "CAA": Frame(notebook),
             "ICAO": Frame(notebook)}
 
-        def split_flight_plan(flight_plan: str) -> List[str]:
-            # This function is quite verbose and could likely be done better... but I'm not going to.
-            # All you need to know is that it removes unnecessary characters and splits the string into a list.
-            flight_plan = flight_plan.replace("\"", "\t")
-            flight_plan = flight_plan.replace("/", "\t")
-            flight_plan = flight_plan.replace(" ", "")
-            flight_plan = flight_plan.replace("\n", "\t")
-            local_split_flight_plan = flight_plan.split("\t")
-            # This mess is to remove empty list items without crashing. I don't know of a better way to do this.
-            to_remove: List[int] = []
-            for i in range(len(local_split_flight_plan)):
-                if local_split_flight_plan[i] == "\t" or local_split_flight_plan[i] == "":
-                    to_remove.append(i)
-            to_remove.reverse()
-            for i in to_remove:
-                local_split_flight_plan.pop(i)
-            return local_split_flight_plan
-
-        def submit_faa() -> None:
-
-            def generate_faa_clearance(flight_plan: str) -> str:
-                local_split_flight_plan: List[str] = split_flight_plan(flight_plan)
-                match local_split_flight_plan[0]:
-                    case "DEPARTURE":
-                        pass
-                    case "ARRIVAL":
-                        pass
-                    case "ENROUTE":
-                        pass
-                    case "EMERGENCY":
-                        pass
-                    case _:
-                        local_split_flight_plan.insert(0, "")
-                # 0: State
-                # 1: Game Callsign
-                # 2: Radio Callsign
-                # 3: IFR/VFR
-                # 4: Aircraft Type
-                # 5: Squawk Code
-                # 6: Timestamp
-                # 7: Requested Flight Level
-                # 8: Departure
-                # 9: Arrival
-                # 10: Route
-                # 11: Remarks
-                # 12: Cleared
-
-                return_string: str = (f"CLR {local_split_flight_plan[2].upper()} TO ARR "
-                                      f"{local_split_flight_plan[9].upper()} VIA {local_split_flight_plan[10].upper()}."
-                                      f" RMK INITIAL ALT 4000 EXPECT {local_split_flight_plan[7]} 10 MINS AFT DEP. "
-                                      f"DEP FREQ ON _. CTC GND ON _ FOR PUSH AND TAXI.")
-
-                return return_string  # TODO Bring it all together here, its late and I'm going to bed
-
-            children: list[Widget] = frames["FAA"].winfo_children()
+        def submit(phraseology: Literal["faa", "caa", "icao"]) -> None:
+            # This is not type safe at all but I know the rules therefore I'm allowed to break them
+            children: List[Widget] = frames["FAA"].winfo_children()
             try:
-                # This is some silly JavaScript type stuff but I know the rules therefor I'm allowed to break them.
-                # Seriously though this is really awful and unsafe and you want type consistency don't do this.
-                # But hey it's in a try except block and you can do anything you want in those... right?
-                # I just found out I can do this too... I forsee many crashed programs in my future
                 text: Text = children[2]  # Pyright really hates this and I kinda do too, oh well.
                 clear_text_box(text)
-                input_field: Text = children[0]  # This too.
+                input_field: Text = children[0]  # This too. I might fix it eventually using casting or something.
                 text.config(state="normal")
-                text.insert(1.0, generate_faa_clearance(input_field.get("1.0", END)))  # I love one-liners.
+                flight_plan = FlightPlan(input_field.get("1.0", END))
+                text.insert(1.0, flight_plan.to_string(phraseology))
                 text.config(state="disabled")
             except Exception as e:
-                print("Error: Problem generating clearance")
-                print(e)
-
-        def submit_caa() -> None:
-            pass
-
-        def submit_icao() -> None:
-            pass
+                traceback.print_tb(e.__traceback__)
 
         # These function calls create the tabs. The only thing different between them is the output when the button
         # is pressed.
-        setup_mode(frames["FAA"], submit_faa)
-        setup_mode(frames["CAA"], submit_caa)
-        setup_mode(frames["ICAO"], submit_icao)
+        # TODO TOP PRIORITY, FIX THIS FIRST
+        setup_mode(frames["FAA"], lambda: submit("faa"))  # TODO THIS 100% NOT WORKING AS INTENDED
+        setup_mode(frames["CAA"], lambda: submit("caa"))  # TODO ITS A VERY EASY (haha) FIX MOVE THE SUBMIT FUNCTION
+        setup_mode(frames["ICAO"], lambda: submit("icao"))  # TODO TO AN OUTER SCOPE BUT IM GOING TO BED NOW
 
         return frames
 
