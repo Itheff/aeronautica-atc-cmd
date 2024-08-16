@@ -28,7 +28,8 @@ class PDCBuilder:
                 temp_dict.update({headers[i]: split_line[i]})
             self.airports.append(temp_dict)
 
-    def generate_squawk(self) -> str:
+    @staticmethod
+    def generate_squawk() -> str:
         """
         This method generates a 4 digit octal number representing a squawk code and returns it as a string.
         """
@@ -37,7 +38,8 @@ class PDCBuilder:
             squawk += str(random.randint(0, 7))
         return squawk
 
-    def split_flight_plan(self, flight_plan: str) -> List[str]:
+    @staticmethod
+    def split_flight_plan(flight_plan: str) -> List[str]:
         """
         This method takes a string of a flight plan and returns a list of its component parts while removing all unused
         characters. It also ensures there is a consistent number of items in the list.
