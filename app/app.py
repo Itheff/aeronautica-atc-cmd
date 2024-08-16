@@ -2,7 +2,7 @@ import random
 import traceback
 from tkinter import END, Tk, Frame, Text, Button, Widget
 from tkinter.ttk import Notebook
-from typing import Callable, List, Literal, TextIO
+from typing import List, Literal, TextIO
 
 
 # Total stack overflow tabs open concurrently: 7
@@ -110,7 +110,7 @@ class FlightPlan:
 
     def generate_squawk(self) -> None:
         temp = ""
-        for i in range(0, 4):
+        while len(temp) >= 4:
             temp += str(random.randint(0, 7))
         self.squawk_code = temp
 
@@ -132,70 +132,60 @@ class FlightPlan:
                 return "NOT IMPLEMENTED"  # TODO IMPLEMENT THIS
 
 
+class PDCFrame(Frame):
+
+    flight_plan_input: Text
+    submit_button: Button
+    pdc_output: Text
+    phraseology: Literal["faa", "caa", "icao"]
+
+    def __init__(self, master: Widget, phraseology: Literal["faa", "caa", "icao"]):
+        super().__init__(master)
+        self.phraseology = phraseology
+        self.flight_plan_input: Text = Text(self, height=10, borderwidth=2)
+        self.submit_button = Button(self, text="Submit", command=self.submit)
+        self.pdc_output = Text(self, height=10, borderwidth=2, wrap="word")
+        self.pdc_output.config(state="disabled")
+        self.pack()
+        self.flight_plan_input.pack(padx=10, pady=10)
+        self.submit_button.pack()
+        self.pdc_output.pack(padx=10, pady=10, expand=True)
+
+    def submit(self):
+        try:
+            self.pdc_output.config(state="normal")
+            self.pdc_output.delete("1.0", END)
+            flight_plan = FlightPlan(self.flight_plan_input.get("1.0", END))
+            self.pdc_output.insert(1.0, flight_plan.to_string(self.phraseology))
+            self.pdc_output.config(state="disabled")
+        except Exception as e:
+            traceback.print_tb(e.__traceback__)
+
+
+class App(Tk):
+
+    notebook: Notebook
+    faa_frame: Frame
+    caa_frame: Frame
+    icao_frame: Frame
+
+    def __init__(self):
+        super().__init__()
+        self.geometry("512x512")
+        self.resizable(False, False)
+        self.title("Aeronautica ATC")
+        notebook = Notebook(self)
+        faa_frame = PDCFrame(notebook, "faa")
+        caa_frame = PDCFrame(notebook, "caa")
+        icao_frame = PDCFrame(notebook, "icao")
+        notebook.add(faa_frame, text="FAA")
+        notebook.add(caa_frame, text="CAA")
+        notebook.add(icao_frame, text="ICAO")
+        notebook.pack()
+
+
 def main() -> None:
-
-    def setup() -> None:
-        # This function is pretty self-explanatory... it sets up the ui
-        root.geometry('512x512')
-        root.resizable(False, False)
-        root.title("Aeronautica ATC")
-        frames: dict[str, Frame] = setup_frames()
-        for key in frames.keys():
-            notebook.add(frames[key], text=key)
-        notebook.pack(fill='both')
-
-    def clear_text_box(text: Text):
-        if text["state"] == "disabled":
-            text.configure(state="normal")
-            text.delete("1.0", END)
-            text.configure(state="disabled")
-        else:
-            text.delete("1.0", END)
-
-    def setup_frames() -> dict[str, Frame]:
-        # Inserting the frames into a dictionary allows using a loop in the setup function above
-        frames: dict[str, Frame] = {
-            "FAA": Frame(notebook),
-            "CAA": Frame(notebook),
-            "ICAO": Frame(notebook)}
-
-        def submit(phraseology: Literal["faa", "caa", "icao"]) -> None:
-            # This is not type safe at all but I know the rules therefore I'm allowed to break them
-            children: List[Widget] = frames[phraseology.upper()].winfo_children()
-            try:
-                text: Text = children[2]  # Pyright really hates this and I kinda do too, oh well.
-                clear_text_box(text)
-                input_field: Text = children[0]  # This too. I might fix it eventually using casting or something.
-                text.config(state="normal")
-                flight_plan = FlightPlan(input_field.get("1.0", END))
-                text.insert(1.0, flight_plan.to_string(phraseology))
-                text.config(state="disabled")
-            except Exception as e:
-                traceback.print_tb(e.__traceback__)
-
-        # These function calls create the tabs. The only thing different between them is the output when the button
-        # is pressed.
-        setup_mode(frames["FAA"], lambda: submit("faa"))
-        setup_mode(frames["CAA"], lambda: submit("caa"))
-        setup_mode(frames["ICAO"], lambda: submit("icao"))
-
-        return frames
-
-    def setup_mode(frame: Frame, command: Callable) -> None:
-        # This is the meat and potatoes of the whole ui and sets up the main tabs' layout
-        text: Text = Text(frame, height=10, borderwidth=2)
-        submit_button = Button(frame, text="Submit", command=command)
-        message = Text(frame, height=10, borderwidth=2, wrap="word")
-        message.insert(1.0, "test")
-        message.config(state="disabled")
-        frame.pack()
-        text.pack(padx=10, pady=10)
-        submit_button.pack()
-        message.pack(padx=10, pady=10, expand=True)
-
-    root: Tk = Tk()
-    notebook: Notebook = Notebook(root)
-    setup()
+    root: App = App()
     root.mainloop()
 
 
