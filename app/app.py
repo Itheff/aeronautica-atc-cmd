@@ -34,7 +34,7 @@ class PDCBuilder:
         This method generates a 4 digit octal number representing a squawk code and returns it as a string.
         """
         squawk = ""
-        while len(squawk) >= 4:
+        while len(squawk) < 4:
             squawk += str(random.randint(0, 7))
         return squawk
 
@@ -103,12 +103,14 @@ class PDCBuilder:
                                       f"{split_flight_plan[10].upper()}. RMK INITIAL ALT 4000 EXPECT "
                                       f"{split_flight_plan[7]} 10 MINS AFT DEP. DEP FREQ ON "
                                       f"{self.find_frequency(split_flight_plan[8], 'gnd')} SQUAWK "
-                                      f"{self.generate_squawk()}. "
                                       f"{self.generate_squawk()}. CTC GND ON "
                                       f"{self.find_frequency(split_flight_plan[8], 'dep')} FOR PUSH AND TAXI.")
                 return return_string
             case "caa":
-                return "NOT IMPLEMENTED"  # TODO IMPLEMENT THIS
+                return_string: str = (f"{split_flight_plan[2].upper()} CLR TO ARR {split_flight_plan[9].upper()} VIA "
+                                      f"{split_flight_plan[10].upper()}. SQUAWK {self.generate_squawk()}, ATIS A. "
+                                      f"WHEN READY CALL FREQ {self.find_frequency(split_flight_plan[8], 'gnd')}.")
+                return return_string
             case "icao":
                 return "NOT IMPLEMENTED"  # TODO IMPLEMENT THIS
 
@@ -173,9 +175,9 @@ class App(Tk):
         notebook = Notebook(self)
         faa_frame = PDCFrame(notebook, "faa")
         caa_frame = PDCFrame(notebook, "caa")
-        caa_frame.flight_plan_input.insert(END, "INOP")
-        caa_frame.flight_plan_input.config(state="disabled", background="gray75")
-        caa_frame.pdc_output.config(state="disabled", background="gray75")
+        caa_frame.pdc_output.config(state="normal")
+        caa_frame.pdc_output.insert(END, "Disclaimer, you must set the correct ATIS every time a PDC is generated")
+        caa_frame.pdc_output.config(state="disabled")
         icao_frame = PDCFrame(notebook, "icao")
         icao_frame.flight_plan_input.insert(END, "INOP")
         icao_frame.flight_plan_input.config(state="disabled", background="gray75")
