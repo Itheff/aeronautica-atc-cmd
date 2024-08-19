@@ -11,6 +11,7 @@ class PDCBuilder:
     program instead of every time a PDC is generated. It does not store the flight plans from PDC's it generates.
     """
     airports: List[dict[str, str]] = []
+    used_squawk_codes: List[str] = []
 
     def read_database(self) -> None:
         """
@@ -28,14 +29,20 @@ class PDCBuilder:
                 temp_dict.update({headers[i]: split_line[i]})
             self.airports.append(temp_dict)
 
-    @staticmethod
-    def generate_squawk() -> str:
+    def generate_squawk(self) -> str:
         """
         This method generates a 4 digit octal number representing a squawk code and returns it as a string.
         """
-        squawk = ""
-        while len(squawk) < 4:
-            squawk += str(random.randint(0, 7))
+        repeat: bool = True
+        squawk: str = ""
+        while repeat:
+            while len(squawk) < 4:
+                squawk += str(random.randint(0, 7))
+            if squawk[2:4] == "00" or squawk[0:2] == "00":
+                squawk = ""
+            else:
+                repeat = False
+        self.used_squawk_codes.append(squawk)
         return squawk
 
     @staticmethod
@@ -46,7 +53,6 @@ class PDCBuilder:
         """
         flight_plan = flight_plan.replace("\"", "\t")
         flight_plan = flight_plan.replace("/", "\t")
-        flight_plan = flight_plan.replace(" ", "")
         flight_plan = flight_plan.replace("\n", "\t")
         split_flight_plan = flight_plan.split("\t")
         to_remove: List[int] = []
@@ -157,35 +163,43 @@ class PDCFrame(Frame):
             traceback.print_tb(e.__traceback__)
 
 
+class PDCNotebook(Notebook):
+
+    faa_frame: PDCFrame
+    caa_frame: PDCFrame
+    icao_frame: PDCFrame
+
+    def __init__(self, master):
+        super().__init__(master)
+        faa_frame = PDCFrame(self, "faa")
+        caa_frame = PDCFrame(self, "caa")
+        caa_frame.pdc_output.config(state="normal")
+        caa_frame.pdc_output.insert(END, "Disclaimer, you must set the correct ATIS every time a PDC is generated")
+        caa_frame.pdc_output.config(state="disabled")
+        icao_frame = PDCFrame(self, "icao")
+        icao_frame.flight_plan_input.insert(END, "INOP")
+        icao_frame.flight_plan_input.config(state="disabled", background="gray75")
+        icao_frame.pdc_output.config(state="disabled", background="gray75")
+        self.add(faa_frame, text="FAA")
+        self.add(caa_frame, text="CAA")
+        self.add(icao_frame, text="ICAO")
+
+
 class App(Tk):
     """
-    The App class is the root component of the UI and contains the notebook which then contains the 3 tabs. It is mostly
+    The App class is the root component of the UI and contains the notebooks which then contain the tabs. It is mostly
     a basic Tk class but with extra steps added to the __init__ to create the unique UI of the program.
     """
-    notebook: Notebook
-    faa_frame: Frame
-    caa_frame: Frame
-    icao_frame: Frame
+
+    pdc_notebook: PDCNotebook
 
     def __init__(self):
         super().__init__()
         self.geometry("512x512")
         self.resizable(False, False)
         self.title("Aeronautica ATC")
-        notebook = Notebook(self)
-        faa_frame = PDCFrame(notebook, "faa")
-        caa_frame = PDCFrame(notebook, "caa")
-        caa_frame.pdc_output.config(state="normal")
-        caa_frame.pdc_output.insert(END, "Disclaimer, you must set the correct ATIS every time a PDC is generated")
-        caa_frame.pdc_output.config(state="disabled")
-        icao_frame = PDCFrame(notebook, "icao")
-        icao_frame.flight_plan_input.insert(END, "INOP")
-        icao_frame.flight_plan_input.config(state="disabled", background="gray75")
-        icao_frame.pdc_output.config(state="disabled", background="gray75")
-        notebook.add(faa_frame, text="FAA")
-        notebook.add(caa_frame, text="CAA")
-        notebook.add(icao_frame, text="ICAO")
-        notebook.pack()
+        pdc_notebook = PDCNotebook(self)
+        pdc_notebook.pack()
 
 
 def main() -> None:
