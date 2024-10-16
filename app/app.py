@@ -1,5 +1,5 @@
-import random
-import traceback
+from random import randint
+from traceback import print_tb
 from tkinter import END, Tk, Frame, Text, Button, Widget
 from tkinter.ttk import Notebook
 from typing import List, Literal
@@ -12,6 +12,7 @@ class PDCBuilder:
     """
     airports: List[dict[str, str]] = []
     used_squawk_codes: List[str] = []
+    current_flight_plan: List[str] = []
 
     def read_database(self) -> None:
         """
@@ -37,7 +38,7 @@ class PDCBuilder:
         squawk: str = ""
         while repeat:
             while len(squawk) < 4:
-                squawk += str(random.randint(0, 7))
+                squawk += str(randint(0, 7))
             if squawk[2:4] == "00" or squawk[0:2] == "00":
                 squawk = ""
             else:
@@ -45,8 +46,7 @@ class PDCBuilder:
         self.used_squawk_codes.append(squawk)
         return squawk
 
-    @staticmethod
-    def split_flight_plan(flight_plan: str) -> List[str]:
+    def split_flight_plan(self, flight_plan: str) -> None:
         """
         This method takes a string of a flight plan and returns a list of its component parts while removing all unused
         characters. It also ensures there is a consistent number of items in the list.
@@ -54,16 +54,16 @@ class PDCBuilder:
         flight_plan = flight_plan.replace("\"", "\t")
         flight_plan = flight_plan.replace("/", "\t")
         flight_plan = flight_plan.replace("\n", "\t")
-        split_flight_plan = flight_plan.split("\t")
+        self.current_flight_plan = flight_plan.split("\t")
         to_remove: List[int] = []
-        for i in range(len(split_flight_plan)):
-            if split_flight_plan[i] == "\t" or split_flight_plan[i] == "":
+        for i in range(len(self.current_flight_plan)):
+            if self.current_flight_plan[i] == "\t" or self.current_flight_plan[i] == "":
                 to_remove.append(i)
         to_remove.reverse()
         for i in to_remove:
-            split_flight_plan.pop(i)
+            self.current_flight_plan.pop(i)
 
-        match split_flight_plan[0]:
+        match self.current_flight_plan[0]:
             case "DEPARTURE":
                 pass
             case "ARRIVAL":
@@ -73,8 +73,7 @@ class PDCBuilder:
             case "EMERGENCY":
                 pass
             case _:
-                split_flight_plan.insert(0, "")
-        return split_flight_plan
+                self.current_flight_plan.insert(0, "")
 
     def find_frequency(self, icao: str, frequency_type: Literal["del", "gnd", "twr", "app", "dep", "ctr"]) -> str:
         """
@@ -101,21 +100,23 @@ class PDCBuilder:
         This method brings everything together and returns the completed PDC. You only need to call this method to
         generate the PDC, everything else is done automatically by this method.
         """
-        split_flight_plan: List[str] = self.split_flight_plan(flight_plan)
+        self.split_flight_plan(flight_plan)
         match phraseology:
             case "faa":
-                return_string: str = (f"CLR {split_flight_plan[2].upper()} TO ARR "
-                                      f"{split_flight_plan[9].upper()} VIA "
-                                      f"{split_flight_plan[10].upper()}. RMK INITIAL ALT 4000 EXPECT "
-                                      f"{split_flight_plan[7]} 10 MINS AFT DEP. DEP FREQ ON "
-                                      f"{self.find_frequency(split_flight_plan[8], 'gnd')} SQUAWK "
+                return_string: str = (f"CLR {self.current_flight_plan[2].upper()} TO ARR "
+                                      f"{self.current_flight_plan[9].upper()} VIA "
+                                      f"{self.current_flight_plan[10].upper()}. RMK INITIAL ALT 4000 EXPECT "
+                                      f"{self.current_flight_plan[7]} 10 MINS AFT DEP. DEP FREQ ON "
+                                      f"{self.find_frequency(self.current_flight_plan[8], 'gnd')} SQUAWK "
                                       f"{self.generate_squawk()}. CTC GND ON "
-                                      f"{self.find_frequency(split_flight_plan[8], 'dep')} FOR PUSH AND TAXI.")
+                                      f"{self.find_frequency(self.current_flight_plan[8], 'dep')} FOR PUSH AND TAXI.")
                 return return_string
             case "caa":
-                return_string: str = (f"{split_flight_plan[2].upper()} CLR TO ARR {split_flight_plan[9].upper()} VIA "
-                                      f"{split_flight_plan[10].upper()}. SQUAWK {self.generate_squawk()}, ATIS A. "
-                                      f"WHEN READY CALL FREQ {self.find_frequency(split_flight_plan[8], 'gnd')}.")
+                return_string: str = (f"{self.current_flight_plan[2].upper()} CLR TO ARR "
+                                      f"{self.current_flight_plan[9].upper()} VIA "
+                                      f"{self.current_flight_plan[10].upper()}. SQUAWK {self.generate_squawk()}, "
+                                      f"ATIS A.  WHEN READY CALL FREQ "
+                                      f"{self.find_frequency(self.current_flight_plan[8], 'gnd')}.")
                 return return_string
             case "icao":
                 return "NOT IMPLEMENTED"  # TODO IMPLEMENT THIS
@@ -151,7 +152,6 @@ class PDCFrame(Frame):
         """
         The submit method is called every time the submit button is pressed. It generates a PDC from the PDCBuilder and
         outputs it to the pdc_output.
-        :return:
         """
         try:
             self.pdc_output.config(state="normal")
@@ -160,7 +160,7 @@ class PDCFrame(Frame):
                                                                    self.phraseology))
             self.pdc_output.config(state="disabled")
         except Exception as e:
-            traceback.print_tb(e.__traceback__)
+            print_tb(e.__traceback__)
 
 
 class PDCNotebook(Notebook):
