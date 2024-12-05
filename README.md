@@ -1,6 +1,6 @@
 # About this Repository
 This repository is a collection of two services. The first is a website that I am creating in case the main Aeronautica
-ATC website at [atc.flysan.xyz](https://atc.flysan.xyz) is ever depreciated or shut down. The second is a Python tkinter
+ATC website at [atc.flysan.xyz](https://atc.flysan.xyz) is ever depreceated or shut down. The second is a Python tkinter
 project that generates PDC clearances for controllers.
 
 ## Aeronautica ATC
